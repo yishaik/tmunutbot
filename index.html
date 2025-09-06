@@ -145,9 +145,9 @@
         // --- CONFIGURATION ---
         // IMPORTANT: In a production app, you MUST NOT expose your API key. 
         // Move all API calls to a secure backend server.
-        const GOOGLE_API_KEY = ""; // Leave this empty, it will be handled by the environment.
+      //  const GOOGLE_API_KEY = ""; // Leave this empty, it will be handled by the environment.
         const IMAGE_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${GOOGLE_API_KEY}`;
-        const TEXT_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${GOOGLE_API_KEY}`;
+   const TEXT_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${GOOGLE_API_KEY}`;
         
         // --- DOM ELEMENTS ---
         const screens = {
@@ -341,15 +341,12 @@
         }
         
         async function callImageApi(imageBase64, prompt) {
-            const payload = { contents: [{ parts: [{ text: prompt }, { inlineData: { mimeType: "image/jpeg", data: imageBase64 } }] }] };
+            const payload = { imageBase64, prompt };
             return callApiWithExponentialBackoff(IMAGE_API_URL, payload);
         }
 
         async function callTextApi(imageBase64, prompt) {
-            const payload = {
-                contents: [{ parts: [{ text: prompt }, { inlineData: { mimeType: "image/jpeg", data: imageBase64 } }] }],
-                generationConfig: { responseMimeType: "application/json" }
-            };
+            const payload = { imageBase64 };
             return callApiWithExponentialBackoff(TEXT_API_URL, payload);
         }
 
