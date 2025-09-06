@@ -146,8 +146,14 @@
         // IMPORTANT: In a production app, you MUST NOT expose your API key. 
         // Move all API calls to a secure backend server.
       //  const GOOGLE_API_KEY = ""; // Leave this empty, it will be handled by the environment.
-        const IMAGE_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${GOOGLE_API_KEY}`;
-   const TEXT_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${GOOGLE_API_KEY}`;
+        // ...
+// --- CONFIGURATION FOR LOCAL DEVELOPMENT ---
+// We point to our own backend server running on our computer.
+const BACKEND_URL = 'http://localhost:3000'; 
+const IMAGE_API_URL = `${BACKEND_URL}/api/edit-image`;
+const TEXT_API_URL = `${BACKEND_URL}/api/get-suggestions`;
+// Note: The GOOGLE_API_KEY is no longer needed here. It's safe on the server.
+// ...
         
         // --- DOM ELEMENTS ---
         const screens = {
