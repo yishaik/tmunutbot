@@ -1,415 +1,258 @@
 <!DOCTYPE html>
-<html lang="he" dir="rtl">
+<html lang="he">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>פוטושופאי - עורך תמונות AI</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        /* Basic styles to respect Telegram's theme */
-        :root {
-            --tg-theme-bg-color: #212121;
-            --tg-theme-text-color: #ffffff;
-            --tg-theme-hint-color: #aaaaaa;
-            --tg-theme-link-color: #8774e1;
-            --tg-theme-button-color: #8774e1;
-            --tg-theme-button-text-color: #ffffff;
-            --tg-theme-secondary-bg-color: #181818;
-        }
-
         body {
-            background-color: var(--tg-theme-bg-color);
-            color: var(--tg-theme-text-color);
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            margin: 0;
-            padding: 1rem;
-            box-sizing: border-box;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
+            font-family: 'Assistant', sans-serif;
+            direction: rtl;
         }
-
-        .card {
-            background-color: var(--tg-theme-secondary-bg-color);
-            border-radius: 0.75rem;
-            padding: 1.5rem;
-        }
-        
-        /* Loading Spinner */
         .loader {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #6366f1;
+            border-radius: 50%;
             width: 50px;
             height: 50px;
-            border-radius: 50%;
-            border: 5px solid var(--tg-theme-hint-color);
-            border-top: 5px solid var(--tg-theme-button-color);
             animation: spin 1s linear infinite;
         }
-        
-        .suggestion-loader {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            border: 2px solid var(--tg-theme-hint-color);
-            border-top: 2px solid var(--tg-theme-button-color);
-            animation: spin 0.8s linear infinite;
-        }
-
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-
-        /* Before/After Image container */
-        .image-container {
-            position: relative;
-            overflow: hidden;
-            border-radius: 0.5rem;
-        }
-        .image-container img {
-            max-width: 100%;
-            height: auto;
-            display: block;
-        }
     </style>
 </head>
-<body class="min-h-screen flex flex-col items-center justify-center p-4">
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 flex items-center justify-center min-h-screen">
 
-    <div id="app" class="w-full max-w-lg mx-auto">
+    <div id="app" class="w-full max-w-md mx-auto p-4">
 
-        <!-- 1. Initial Upload Screen -->
-        <div id="upload-screen" class="card text-center">
-            <h1 class="text-2xl font-bold mb-2">פוטושופאי AI</h1>
-            <p class="text-lg text-gray-400 mb-6">עוזר העריכה האישי שלך</p>
-            <div class="border-2 border-dashed border-gray-600 rounded-lg p-8 cursor-pointer hover:bg-gray-800 transition-colors" onclick="document.getElementById('image-input').click()">
-                <i class="fas fa-cloud-upload-alt text-5xl text-gray-500 mb-4"></i>
-                <p class="font-semibold">העלה/י תמונה כדי להתחיל</p>
-                <p class="text-sm text-gray-500">לחץ/י כאן לבחירת קובץ</p>
-            </div>
-            <input type="file" id="image-input" accept="image/*" class="hidden">
+        <!-- Upload Screen -->
+        <div id="upload-screen" class="text-center">
+            <h1 class="text-3xl font-bold text-indigo-500 mb-2">פוטושופאי</h1>
+            <p class="text-gray-600 dark:text-gray-400 mb-6">העלה תמונה והפוך אותה לקסם בעזרת AI</p>
+            <label for="image-upload" class="cursor-pointer bg-indigo-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-indigo-600 transition-colors duration-300 inline-block">
+                בחר תמונה
+            </label>
+            <input type="file" id="image-upload" class="hidden" accept="image/*">
         </div>
 
-        <!-- 2. Editing Screen -->
-        <div id="edit-screen" class="hidden">
-            <div class="card mb-4">
-                <img id="image-preview" src="" alt="Image Preview" class="rounded-lg w-full max-h-[40vh] object-contain">
-            </div>
-            <div class="card">
-                <div class="flex justify-between items-center mb-2">
-                     <label for="prompt-input" class="block text-lg font-medium">מה תרצה/י לשנות בתמונה?</label>
-                     <button id="suggestion-btn" class="text-sm bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-3 rounded-lg transition flex items-center gap-2">
-                        <span id="suggestion-btn-text">✨ הצע לי רעיונות</span>
-                        <div id="suggestion-loader" class="suggestion-loader hidden"></div>
-                     </button>
+        <!-- Edit Screen -->
+        <div id="edit-screen" class="hidden flex-col items-center">
+            <div class="relative w-full max-w-sm mb-4">
+                <img id="preview-image" src="" alt="תצוגה מקדימה" class="rounded-lg shadow-lg w-full h-auto">
+                <div id="loader-overlay" class="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-lg hidden">
+                    <div class="loader"></div>
                 </div>
-                <textarea id="prompt-input" rows="3" class="w-full p-2 rounded-md bg-gray-800 border border-gray-600 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition" placeholder="לדוגמה: הסר את האדם ברקע..."></textarea>
-                <div id="suggestions-container" class="mt-3 flex flex-wrap gap-2"></div>
             </div>
+            <p class="font-bold mb-2">מה תרצה לשנות בתמונה?</p>
+            <textarea id="prompt-input" rows="3" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-200 dark:bg-gray-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none mb-2" placeholder="לדוגמה: הפוך את השמיים לסגולים, הוסף חללית..."></textarea>
+            
+            <div id="suggestions-container" class="w-full mb-4">
+                 <button id="get-suggestions-btn" class="w-full bg-teal-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-teal-600 transition-colors duration-300 text-sm mb-2">
+                    ✨ הצע לי רעיונות
+                </button>
+                <div id="suggestions-buttons" class="flex flex-wrap gap-2 justify-center"></div>
+            </div>
+
+            <button id="back-button" class="w-full bg-gray-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-600 transition-colors duration-300">
+                החלף תמונה
+            </button>
         </div>
         
-        <!-- 3. Loading Screen -->
-        <div id="loading-screen" class="hidden card text-center p-8">
-            <div class="loader mx-auto mb-6"></div>
-            <p class="text-lg font-semibold animate-pulse">יוצר קסם... נא להמתין</p>
-            <p class="text-sm text-gray-400 mt-2">הבינה המלאכותית עובדת על התמונה שלך</p>
+        <!-- Error Modal -->
+        <div id="error-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-sm text-center">
+                <h3 class="text-lg font-bold text-red-500 mb-2">אירעה שגיאה</h3>
+                <p id="error-message" class="text-sm text-gray-600 dark:text-gray-400 mb-4">.Failed to fetch</p>
+                <button onclick="hideError()" class="bg-indigo-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-indigo-600 transition-colors">סגור</button>
+            </div>
         </div>
 
-        <!-- 4. Result Screen -->
-        <div id="result-screen" class="hidden">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div class="card text-center">
-                    <h2 class="text-xl font-bold mb-2">לפני</h2>
-                    <div class="image-container">
-                        <img id="before-image" src="" alt="Original Image">
-                    </div>
-                </div>
-                <div class="card text-center">
-                    <h2 class="text-xl font-bold mb-2">אחרי</h2>
-                     <div class="image-container">
-                        <img id="after-image" src="" alt="Edited Image">
-                    </div>
-                </div>
-            </div>
-             <div class="grid grid-cols-2 lg:grid-cols-3 gap-2">
-                <button id="download-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition"><i class="fas fa-download mr-2"></i>הורדה</button>
-                <button id="share-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition"><i class="fas fa-share-alt mr-2"></i>שיתוף</button>
-                <button id="new-edit-btn" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded-lg transition col-span-2 lg:col-span-1"><i class="fas fa-pencil-alt mr-2"></i>עריכה חדשה</button>
-            </div>
-        </div>
     </div>
 
-    <script type="module">
-        const tg = window.Telegram.WebApp;
-
+    <script>
         // --- CONFIGURATION ---
-        // IMPORTANT: In a production app, you MUST NOT expose your API key. 
-        // Move all API calls to a secure backend server.
-      //  const GOOGLE_API_KEY = ""; // Leave this empty, it will be handled by the environment.
-        // ...
-// --- CONFIGURATION FOR LOCAL DEVELOPMENT ---
-// We point to our own backend server running on our computer.
-const BACKEND_URL = 'http://localhost:3000'; 
-const IMAGE_API_URL = `${BACKEND_URL}/api/edit-image`;
-const TEXT_API_URL = `${BACKEND_URL}/api/get-suggestions`;
-// Note: The GOOGLE_API_KEY is no longer needed here. It's safe on the server.
-// ...
-        
+        const BACKEND_URL = 'http://localhost:3000'; 
+        const IMAGE_API_URL = `${BACKEND_URL}/api/edit-image`;
+        const TEXT_API_URL = `${BACKEND_URL}/api/get-suggestions`;
+
         // --- DOM ELEMENTS ---
-        const screens = {
-            upload: document.getElementById('upload-screen'),
-            edit: document.getElementById('edit-screen'),
-            loading: document.getElementById('loading-screen'),
-            result: document.getElementById('result-screen'),
-        };
-        const imageInput = document.getElementById('image-input');
-        const imagePreview = document.getElementById('image-preview');
+        const uploadScreen = document.getElementById('upload-screen');
+        const editScreen = document.getElementById('edit-screen');
+        const imageUploadInput = document.getElementById('image-upload');
+        const previewImage = document.getElementById('preview-image');
         const promptInput = document.getElementById('prompt-input');
-        const suggestionBtn = document.getElementById('suggestion-btn');
-        const suggestionBtnText = document.getElementById('suggestion-btn-text');
-        const suggestionLoader = document.getElementById('suggestion-loader');
-        const suggestionsContainer = document.getElementById('suggestions-container');
-        const beforeImage = document.getElementById('before-image');
-        const afterImage = document.getElementById('after-image');
-        const downloadBtn = document.getElementById('download-btn');
-        const shareBtn = document.getElementById('share-btn');
-        const newEditBtn = document.getElementById('new-edit-btn');
-        
-        let originalImageBase64 = null;
-        let editedImageBase64 = null;
+        const backButton = document.getElementById('back-button');
+        const loaderOverlay = document.getElementById('loader-overlay');
+        const getSuggestionsBtn = document.getElementById('get-suggestions-btn');
+        const suggestionsButtonsContainer = document.getElementById('suggestions-buttons');
+        const errorModal = document.getElementById('error-modal');
+        const errorMessage = document.getElementById('error-message');
 
-        // --- FUNCTIONS ---
+        let tg = window.Telegram.WebApp;
+        tg.expand();
 
-        function showScreen(screenName) {
-            Object.values(screens).forEach(screen => screen.classList.add('hidden'));
-            if (screens[screenName]) {
-                screens[screenName].classList.remove('hidden');
-            }
-        }
+        let currentImageBase64 = null;
 
-        function base64ToBlob(base64, mimeType) {
-            const byteCharacters = atob(base64);
-            const byteNumbers = new Array(byteCharacters.length);
-            for (let i = 0; i < byteCharacters.length; i++) {
-                byteNumbers[i] = byteCharacters.charCodeAt(i);
-            }
-            const byteArray = new Uint8Array(byteNumbers);
-            return new Blob([byteArray], { type: mimeType });
-        }
+        // --- EVENT LISTENERS ---
+        imageUploadInput.addEventListener('change', handleImageUpload);
+        backButton.addEventListener('click', resetToUpload);
+        getSuggestionsBtn.addEventListener('click', fetchSuggestions);
 
-        function fileToBase64(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = () => resolve(reader.result.split(',')[1]);
-                reader.onerror = error => reject(error);
-            });
-        }
-        
-        async function handleImageUpload(event) {
+        function handleImageUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
 
-            try {
-                originalImageBase64 = await fileToBase64(file);
-                imagePreview.src = `data:image/jpeg;base64,${originalImageBase64}`;
-                beforeImage.src = `data:image/jpeg;base64,${originalImageBase64}`;
-                
-                showScreen('edit');
-                suggestionsContainer.innerHTML = ''; // Clear old suggestions
-                tg.MainButton.setText("צור קסם");
-                tg.MainButton.show();
-                tg.HapticFeedback.impactOccurred('light');
-            } catch (error) {
-                console.error("Error handling image upload:", error);
-                tg.showAlert('אירעה שגיאה בעיבוד התמונה. נסה/י קובץ אחר.');
-                showScreen('upload');
-                tg.MainButton.hide();
-            }
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                currentImageBase64 = e.target.result.split(',')[1];
+                previewImage.src = e.target.result;
+                showEditScreen();
+            };
+            reader.onerror = function(error) {
+                console.error("File reading error:", error);
+                showError("שגיאה בקריאת הקובץ.");
+            };
+            reader.readAsDataURL(file);
         }
 
-        async function processImageEdit() {
-            const userPrompt = promptInput.value;
-            if (!userPrompt.trim()) {
-                tg.showAlert('נא להזין בקשה לעריכה.');
-                return;
-            }
-
-            showScreen('loading');
-            tg.MainButton.hide();
-            tg.HapticFeedback.notificationOccurred('warning');
-
-            try {
-                const engineeredPrompt = `${userPrompt}. Make the edit look photorealistic.`;
-                const response = await callImageApi(originalImageBase64, engineeredPrompt);
-                
-                const generatedPart = response?.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
-                if (!generatedPart) {
-                    throw new Error("לא התקבלה תמונה מה-API. ייתכן והבקשה נדחתה עקב מדיניות בטיחות.");
-                }
-
-                editedImageBase64 = generatedPart.inlineData.data;
-                afterImage.src = `data:${generatedPart.inlineData.mimeType};base64,${editedImageBase64}`;
-
-                showScreen('result');
-                tg.HapticFeedback.notificationOccurred('success');
-
-            } catch (error) {
-                console.error("API Error:", error);
-                tg.showAlert(`אירעה שגיאה: ${error.message}`);
-                showScreen('edit'); // Go back to edit screen on error
-                tg.MainButton.show();
-            }
-        }
-
-        async function getPromptSuggestions() {
-            if (!originalImageBase64) {
-                tg.showAlert('נא להעלות תמונה תחילה.');
-                return;
-            }
+        // --- UI LOGIC ---
+        function showEditScreen() {
+            uploadScreen.classList.add('hidden');
+            editScreen.classList.remove('hidden');
+            editScreen.classList.add('flex');
             
-            suggestionBtn.disabled = true;
-            suggestionBtnText.classList.add('hidden');
-            suggestionLoader.classList.remove('hidden');
-            suggestionsContainer.innerHTML = ''; // Clear previous suggestions
-            tg.HapticFeedback.impactOccurred('light');
-
-            try {
-                const prompt = `Analyze this image and provide 3 creative and concise photo editing suggestions in Hebrew. The suggestions should be phrased as commands an expert photo editor would use. The tone should be inspiring. Return the response as a valid JSON object with a single key "suggestions" which is an array of strings. For example: {"suggestions": ["הפוך את השמיים לדרמטיים וסוערים", "הוסף אפקט של ציור שמן", "שנה את צבע החולצה שלי לכחול"]}`;
-                const response = await callTextApi(originalImageBase64, prompt);
-
-                const textResponse = response?.candidates?.[0]?.content?.parts?.[0]?.text;
-                if (!textResponse) {
-                     throw new Error("לא התקבלו הצעות מה-API.");
-                }
-
-                // Clean the response from markdown and parse it
-                const jsonString = textResponse.replace(/```json|```/g, '').trim();
-                const parsed = JSON.parse(jsonString);
-                
-                if (parsed.suggestions && Array.isArray(parsed.suggestions)) {
-                    parsed.suggestions.forEach(suggestion => {
-                        const button = document.createElement('button');
-                        button.textContent = suggestion;
-                        button.className = "bg-gray-700 hover:bg-purple-600 text-white text-sm font-semibold py-1 px-3 rounded-full transition";
-                        button.onclick = () => {
-                            promptInput.value = suggestion;
-                            suggestionsContainer.innerHTML = ''; // Clear suggestions after selection
-                            tg.HapticFeedback.impactOccurred('light');
-                        };
-                        suggestionsContainer.appendChild(button);
-                    });
-                } else {
-                    throw new Error("פורמט ההצעות שהתקבל אינו תקין.");
-                }
-
-            } catch (error) {
-                console.error("Suggestion API Error:", error);
-                tg.showAlert(`שגיאה בקבלת הצעות: ${error.message}`);
-            } finally {
-                suggestionBtn.disabled = false;
-                suggestionBtnText.classList.remove('hidden');
-                suggestionLoader.classList.add('hidden');
-            }
-        }
-        
-        async function callApiWithExponentialBackoff(apiUrl, payload, maxRetries = 3) {
-            let attempt = 0;
-            while (attempt < maxRetries) {
-                try {
-                    const response = await fetch(apiUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-
-                    if (response.status === 429 || response.status >= 500) { // Throttling or server error
-                        throw new Error(`Server error with status ${response.status}`);
-                    }
-                    
-                    if (!response.ok) {
-                        const errorBody = await response.json();
-                        console.error("Google API Error Response:", errorBody);
-                        throw new Error(`שגיאת שרת (${response.status}): ${errorBody.error?.message || 'Unknown error'}`);
-                    }
-
-                    return response.json();
-
-                } catch (error) {
-                    attempt++;
-                    if (attempt >= maxRetries) {
-                        throw error;
-                    }
-                    const delay = Math.pow(2, attempt) * 1000 + Math.random() * 1000;
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                }
-            }
-        }
-        
-        async function callImageApi(imageBase64, prompt) {
-            const payload = { imageBase64, prompt };
-            return callApiWithExponentialBackoff(IMAGE_API_URL, payload);
+            tg.MainButton.setText('צור קסם 🎨');
+            tg.MainButton.show();
+            tg.MainButton.onClick(submitEditRequest);
         }
 
-        async function callTextApi(imageBase64, prompt) {
-            const payload = { imageBase64 };
-            return callApiWithExponentialBackoff(TEXT_API_URL, payload);
-        }
-
-        // --- EVENT LISTENERS ---
-        imageInput.addEventListener('change', handleImageUpload);
-        suggestionBtn.addEventListener('click', getPromptSuggestions);
-        tg.onEvent('mainButtonClicked', processImageEdit);
-        
-        downloadBtn.addEventListener('click', () => {
-            if (!editedImageBase64) return;
-            const blob = base64ToBlob(editedImageBase64, 'image/png');
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'edited_image_by_photoshopai.png';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            tg.HapticFeedback.impactOccurred('light');
-        });
-        
-        shareBtn.addEventListener('click', () => {
-            tg.shareMessage({
-               text: "נוצרה באמצעות בוט הפוטושופאי! נסו גם אתם.",
-               url: "t.me/YourBotUsername" // TODO: Replace with your bot's username link
-            });
-            tg.HapticFeedback.impactOccurred('light');
-        });
-
-        newEditBtn.addEventListener('click', () => {
-            // Reset state
-            originalImageBase64 = null;
-            editedImageBase64 = null;
-            imageInput.value = '';
+        function resetToUpload() {
+            uploadScreen.classList.remove('hidden');
+            editScreen.classList.add('hidden');
+            editScreen.classList.remove('flex');
+            
             promptInput.value = '';
+            currentImageBase64 = null;
+            imageUploadInput.value = ''; // Clear the file input
+            suggestionsButtonsContainer.innerHTML = ''; // Clear suggestions
             
-            showScreen('upload');
             tg.MainButton.hide();
-            tg.HapticFeedback.impactOccurred('medium');
-        });
-
-        // --- INITIALIZATION ---
-        function init() {
-            tg.ready();
-            tg.expand();
-            
-            tg.MainButton.setParams({ text: "צור קסם", color: '#8774e1', text_color: '#ffffff' });
-            tg.MainButton.hide();
-
-            document.body.style.backgroundColor = tg.themeParams.bg_color || '#212121';
-            document.body.style.color = tg.themeParams.text_color || '#ffffff';
-            
-            showScreen('upload');
+            tg.MainButton.offClick(submitEditRequest);
         }
 
-        init();
+        function setLoading(isLoading) {
+            loaderOverlay.classList.toggle('hidden', !isLoading);
+            if (isLoading) {
+                tg.MainButton.showProgress();
+                tg.MainButton.disable();
+            } else {
+                tg.MainButton.hideProgress();
+                tg.MainButton.enable();
+            }
+        }
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorModal.classList.remove('hidden');
+        }
+
+        function hideError() {
+            errorModal.classList.add('hidden');
+        }
+
+        // --- API CALLS ---
+        async function submitEditRequest() {
+            const prompt = promptInput.value;
+            if (!prompt || !currentImageBase64) {
+                tg.showAlert('אנא כתוב מה ברצונך לשנות בתמונה.');
+                return;
+            }
+
+            setLoading(true);
+
+            try {
+                const response = await fetch(IMAGE_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ imageBase64: currentImageBase64, prompt: prompt })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || `שגיאת שרת: ${response.status}`);
+                }
+                
+                // Assuming the API returns the edited image data
+                // In a real app, you would handle the response here.
+                // For now, we'll just show a success message.
+                tg.showAlert('הבקשה נשלחה בהצלחה! (זוהי גרסת הדגמה)');
+                console.log("Success:", await response.json());
+
+            } catch (error) {
+                console.error('Fetch Error:', error);
+                showError(`שגיאה בשליחת הבקשה: ${error.message}`);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        async function fetchSuggestions() {
+            if (!currentImageBase64) return;
+            
+            setLoading(true);
+            suggestionsButtonsContainer.innerHTML = '';
+
+            try {
+                const response = await fetch(TEXT_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ imageBase64: currentImageBase64 })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || `שגיאת שרת: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                // Gemini sometimes wraps the JSON in markdown
+                const textResponse = data.candidates[0].content.parts[0].text;
+                const cleanedJson = textResponse.replace(/```json\n|```/g, '');
+                const parsedData = JSON.parse(cleanedJson);
+
+                if (parsedData.suggestions && parsedData.suggestions.length > 0) {
+                    displaySuggestions(parsedData.suggestions);
+                } else {
+                    tg.showAlert('לא נמצאו הצעות.');
+                }
+
+            } catch (error) {
+                console.error('Suggestions Fetch Error:', error);
+                showError(`שגיאה בקבלת הצעות: ${error.message}`);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        function displaySuggestions(suggestions) {
+            suggestions.forEach(text => {
+                const button = document.createElement('button');
+                button.textContent = text;
+                button.className = 'bg-gray-200 dark:bg-gray-700 text-xs font-medium py-1 px-3 rounded-full hover:bg-indigo-500 hover:text-white transition-colors';
+                button.onclick = () => {
+                    promptInput.value = text;
+                };
+                suggestionsButtonsContainer.appendChild(button);
+            });
+        }
     </script>
 </body>
 </html>
